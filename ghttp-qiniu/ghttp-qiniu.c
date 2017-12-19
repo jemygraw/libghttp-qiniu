@@ -101,6 +101,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     char *form_boundary = (char *) malloc(sizeof(char) * (form_boundary_len + 1));
     strcat(form_boundary, form_prefix);
     strcat(form_boundary, random_suffix);
+    free(random_suffix);
 
     //init the form data
     size_t form_data_len = 0;
@@ -156,7 +157,6 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     }
     fclose(fp);
 
-
     form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, "file", file_body, file_len,
                                   mime_type, &form_data_len);
 
@@ -168,6 +168,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     size_t form_content_type_len = 31 + strlen(form_boundary);
     char *form_content_type = (char *) malloc(sizeof(char) * form_content_type_len);
     snprintf(form_content_type, form_content_type_len, "multipart/form-data; boundary=%s", form_boundary);
+    free(form_boundary);
 
     ghttp_request *request = NULL;
     request = ghttp_request_new();
@@ -182,6 +183,10 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     ghttp_prepare(request);
     ghttp_process(request);
 
+    //free
+    free(form_content_type);
+    free(form_data);
+
     int resp_body_len = ghttp_get_body_len(request);
     char *resp_body = (char *) malloc(sizeof(char) * (resp_body_len + 1));
     char *resp_body_end = qn_memconcat(resp_body, ghttp_get_body(request), resp_body_len);
@@ -194,10 +199,5 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     //destroy
     ghttp_request_destroy(request);
 
-    //free
-    free(random_suffix);
-    free(form_boundary);
-    free(form_content_type);
-    free(form_data);
     return 0;
 }
