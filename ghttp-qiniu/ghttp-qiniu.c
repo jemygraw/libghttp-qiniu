@@ -141,7 +141,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     }
 
     //add file
-    fp = fopen(local_path, "r+");
+    fp = fopen(local_path, "rb+");
     if (fp == NULL) {
         return -1;
     }
@@ -161,11 +161,11 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
                                   mime_type, &form_data_len);
 
     form_data_p = qn_memconcat(form_data_p, form_boundary, form_boundary_len);
-    form_data_p = qn_memconcat(form_data_p, "--\r\n", 4);
+    qn_memconcat(form_data_p, "--\r\n", 4);
     form_data_len += form_boundary_len + 4;
 
     //send the request
-    size_t form_content_type_len = 31 + strlen(form_boundary);
+    size_t form_content_type_len = 31 + form_boundary_len;
     char *form_content_type = (char *) malloc(sizeof(char) * form_content_type_len);
     snprintf(form_content_type, form_content_type_len, "multipart/form-data; boundary=%s", form_boundary);
     free(form_boundary);
