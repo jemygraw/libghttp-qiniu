@@ -190,7 +190,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     int resp_body_len = ghttp_get_body_len(request);
     char *resp_body = (char *) malloc(sizeof(char) * (resp_body_len + 1));
     char *resp_body_end = qn_memconcat(resp_body, ghttp_get_body(request), resp_body_len);
-    resp_body_end = NULL; //end it
+    *resp_body_end = 0; //end it
 
     put_ret->resp_body = resp_body;
     put_ret->resp_body_len = resp_body_len;
