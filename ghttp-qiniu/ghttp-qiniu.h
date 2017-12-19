@@ -31,6 +31,7 @@ typedef struct _qn_putret__ {
     char *resp_body;
     int resp_body_len;
     int status_code;
+    const char *error;
 } qn_putret;
 
 

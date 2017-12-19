@@ -148,6 +148,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     //add file
     fp = fopen(local_path, "rb+");
     if (fp == NULL) {
+        put_ret->error = "open local file errro";
         return -1;
     }
 
@@ -158,6 +159,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     char *file_body = (char *) malloc(sizeof(char) * file_len);
     size_t read_num = fread(file_body, sizeof(char), file_len, fp);
     if (read_num != file_len) {
+        put_ret->error = "read file size unmatch";
         return -1;
     }
     fclose(fp);
@@ -178,6 +180,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     ghttp_request *request = NULL;
     request = ghttp_request_new();
     if (request == NULL) {
+        put_ret->error = "new request error";
         return -1;
     }
 
@@ -191,7 +194,12 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     ghttp_set_type(request, ghttp_type_post);
     ghttp_set_body(request, form_data, form_data_len);
     ghttp_prepare(request);
-    ghttp_process(request);
+    ghttp_status status = ghttp_process(request);
+    if (status == ghttp_error) {
+        put_ret->error = ghttp_get_error(request);
+        ghttp_request_destroy(request);
+        return -1;
+    }
 
     //free
     free(form_content_type);
