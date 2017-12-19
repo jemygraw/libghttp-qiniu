@@ -53,6 +53,7 @@ char *qn_addformfield(char *dst_buffer, char *form_boundary, size_t form_boundar
                       const char *field_name,
                       char *field_value, size_t field_value_len,
                       const char *field_mime_type, size_t *form_data_len) {
+    size_t delta_len = 0;
     size_t field_name_len = strlen(field_name);
     size_t field_mime_len = 0;
     if (field_mime_type) {
@@ -61,19 +62,26 @@ char *qn_addformfield(char *dst_buffer, char *form_boundary, size_t form_boundar
 
     char *dst_buffer_p = dst_buffer;
     dst_buffer_p = qn_memconcat(dst_buffer_p, form_boundary, form_boundary_len);
-    dst_buffer_p = qn_memconcat(dst_buffer_p, "\r\n", strlen("\r\n"));
+    dst_buffer_p = qn_memconcat(dst_buffer_p, "\r\n", 2);
+    delta_len += 2;
     dst_buffer_p = qn_memconcat(dst_buffer_p, "Content-Disposition: form-data; name=\"", 38);
+    delta_len += 38;
     dst_buffer_p = qn_memconcat(dst_buffer_p, field_name, field_name_len);
     dst_buffer_p = qn_memconcat(dst_buffer_p, "\"", 1);
+    delta_len += 1;
     if (field_mime_type) {
         dst_buffer_p = qn_memconcat(dst_buffer_p, "\r\nContent-Type: ", 16);
         dst_buffer_p = qn_memconcat(dst_buffer_p, field_mime_type, field_mime_len);
+        delta_len += 16;
     }
 
     dst_buffer_p = qn_memconcat(dst_buffer_p, "\r\n\r\n", 4);
     dst_buffer_p = qn_memconcat(dst_buffer_p, field_value, field_value_len);
     dst_buffer_p = qn_memconcat(dst_buffer_p, "\r\n--", 4);
-    *form_data_len += form_boundary_len + field_name_len + field_mime_len + field_value_len + 65;
+    delta_len += 8;
+
+    delta_len += form_boundary_len + field_name_len + field_mime_len + field_value_len;
+    *form_data_len += delta_len;
     return dst_buffer_p;
 }
 
@@ -123,7 +131,6 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, "token", (char *) upload_token,
                                   strlen(upload_token), NULL, &form_data_len);
 
-    //add extra_params
     if (extra_params_count > 0) {
         qn_map *p = extra_params;
 
@@ -173,6 +180,11 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     if (request == NULL) {
         return -1;
     }
+
+//    fp = fopen("test.req.txt", "wb+");
+//    printf("write: %d\n", fwrite(form_data, 1, form_data_len, fp));
+//    fclose(fp);
+
     ghttp_set_uri(request, QN_UPLOAD_HOST);
     ghttp_set_header(request, "Content-Type", form_content_type);
     ghttp_set_header(request, "User-Agent", QN_USER_AGENT);
