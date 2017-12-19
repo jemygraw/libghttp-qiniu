@@ -129,13 +129,11 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
 
         for (i = 0; i < extra_params_count; i++) {
             char *param_key = p->key;
-            if (strncmp(param_key, "x:", 2) != 0) {
-                continue;
+            if (strncmp(param_key, "x:", 2) == 0) {
+                char *param_value = p->value;
+                form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, param_key, param_value,
+                                              strlen(param_value), NULL, &form_data_len);
             }
-            char *param_value = p->value;
-            form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, param_key, param_value,
-                                          strlen(param_value),
-                                          NULL, &form_data_len);
             p++;
         }
     }
