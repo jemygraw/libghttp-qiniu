@@ -4,4 +4,4 @@ SOURCE_FILES=\
 	main.c
 
 all: $(SOURCE_FILES)
-	gcc -g $^ -o upload $(INCLUDE_PATH) -lghttp
+	gcc -std=c99 -g $^ -o upload $(INCLUDE_PATH) -lghttp
