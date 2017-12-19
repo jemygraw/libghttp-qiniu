@@ -106,7 +106,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     const char *form_prefix = "----QNSDKFormBoundary";
     char *random_suffix = qn_random_str(16);
     size_t form_boundary_len = strlen(form_prefix) + 16;
-    char *form_boundary = (char *) malloc(sizeof(char) * (form_boundary_len + 1));
+    char *form_boundary = (char *) calloc(form_boundary_len + 1, sizeof(char));
     strcat(form_boundary, form_prefix);
     strcat(form_boundary, random_suffix);
     free(random_suffix);
