@@ -148,7 +148,9 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     //add file
     fp = fopen(local_path, "rb+");
     if (fp == NULL) {
-        put_ret->error = "open local file errro";
+        put_ret->error = "open local file error";
+        free(form_data);
+        free(form_boundary);
         return -1;
     }
 
@@ -160,13 +162,16 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     size_t read_num = fread(file_body, sizeof(char), file_len, fp);
     if (read_num != file_len) {
         put_ret->error = "read file size unmatch";
+        free(form_data);
+        free(form_boundary);
+        free(file_body);
         return -1;
     }
     fclose(fp);
 
     form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, "file", file_body, file_len,
                                   mime_type, &form_data_len);
-
+    free(file_body);
     form_data_p = qn_memconcat(form_data_p, form_boundary, form_boundary_len);
     qn_memconcat(form_data_p, "--\r\n", 4);
     form_data_len += form_boundary_len + 4;
@@ -181,6 +186,8 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     request = ghttp_request_new();
     if (request == NULL) {
         put_ret->error = "new request error";
+        free(form_data);
+        free(form_content_type);
         return -1;
     }
 
