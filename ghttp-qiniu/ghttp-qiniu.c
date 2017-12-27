@@ -205,6 +205,8 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     if (status == ghttp_error) {
         put_ret->error = ghttp_get_error(request);
         ghttp_request_destroy(request);
+        free(form_content_type);
+        free(form_data);
         return -1;
     }
 
