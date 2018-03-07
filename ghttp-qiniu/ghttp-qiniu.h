@@ -9,6 +9,8 @@
 #include <ghttp.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 // multi-data form body size, default is 512KB
 static size_t QN_MULTIDATA_FORM_SIZE = 512 * 1024;
@@ -16,9 +18,10 @@ static size_t QN_MULTIDATA_FORM_SIZE = 512 * 1024;
 // qiniu storage upload host
 static char *QN_UPLOAD_HOST = "http://upload.qiniup.com";
 
-// qiniu arm sdk user agent
+// qiniu arm sdk user agent (do not change)
+static char *QN_REPORT_HOST = "http://uplog.qbox.me/log/3";
 static char *QN_USER_AGENT = "qiniu-arm-sdk(1.0.0;)";
-
+static int X_REQID_LEN = 17;
 // qiniu key-value map
 typedef struct __qn_map__ {
     char *key;
@@ -51,5 +54,10 @@ char *qn_addformfield(char *dst_buffer, char *form_boundary, size_t form_boundar
 // qiniu form upload file
 int qn_upload_file(const char *local_path, const char *upload_token, const char *file_key, const char *mime_type,
                    qn_map *extra_params, int extra_params_count, qn_putret *put_ret);
+
+// qiniu report upload status
+void qn_upload_report(const char *upload_token, int status_code, char *req_id, char *remote_host, char *remote_ip,
+                      int remote_port, long duration, long upload_time, long bytes_sent, char *upload_type,
+                      long file_size);
 
 #endif //LIBGHTTP_QINIU_GHTTP_QINIU_H

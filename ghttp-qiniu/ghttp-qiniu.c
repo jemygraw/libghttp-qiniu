@@ -2,6 +2,7 @@
 // Created by jemy on 19/12/2017.
 //
 
+#include <arpa/inet.h>
 #include "ghttp-qiniu.h"
 
 // create a fixed length of random string
@@ -100,6 +101,26 @@ char *qn_addformfield(char *dst_buffer, char *form_boundary, size_t form_boundar
  * */
 int qn_upload_file(const char *local_path, const char *upload_token, const char *file_key, const char *mime_type,
                    qn_map *extra_params, int extra_params_count, qn_putret *put_ret) {
+
+    //define reporting fields
+    int status_code = 0;
+    char req_id[X_REQID_LEN];
+    char *p = strrchr(QN_UPLOAD_HOST, '/');
+    char *remote_host = p + 1;
+    //printf("upload host: %s\n",host);
+    char remote_ip[INET6_ADDRSTRLEN];
+    int remote_port = 80;
+    long duration = 0;
+    long start_time = time(NULL);
+    long upload_time = start_time;
+    long bytes_sent = 0;
+    char *upload_type = "armsdk";
+    long file_size = 0;
+
+    memset(req_id, X_REQID_LEN, 0);
+    memset(remote_ip, INET6_ADDRSTRLEN, 0);
+    //end
+
     int i;
     FILE *fp = NULL;
 
@@ -151,11 +172,17 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
         put_ret->error = "open local file error";
         free(form_data);
         free(form_boundary);
+
+        status_code = -3;
+        duration = (time(NULL) - start_time) * 1000;
+        qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
+                         bytes_sent, upload_type, file_size);
         return -1;
     }
 
     fseek(fp, 0, SEEK_END);
     long file_len = ftell(fp);
+    file_size = file_len;
     rewind(fp);
 
     char *file_body = (char *) malloc(sizeof(char) * file_len);
@@ -165,6 +192,12 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
         free(form_data);
         free(form_boundary);
         free(file_body);
+
+        status_code = -3;
+        duration = (time(NULL) - start_time) * 1000;
+
+        qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
+                         bytes_sent, upload_type, file_size);
         return -1;
     }
     fclose(fp);
@@ -188,6 +221,13 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
         put_ret->error = "new request error";
         free(form_data);
         free(form_content_type);
+
+        status_code = -1004;
+        duration = (time(NULL) - start_time) * 1000;
+
+        qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
+                         bytes_sent, upload_type, file_size);
+
         return -1;
     }
 
@@ -207,6 +247,13 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
         ghttp_request_destroy(request);
         free(form_content_type);
         free(form_data);
+
+        status_code = -1;
+        duration = (time(NULL) - start_time) * 1000;
+
+        qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
+                         bytes_sent, upload_type, file_size);
+
         return -1;
     }
 
@@ -223,8 +270,128 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     put_ret->resp_body_len = resp_body_len;
     put_ret->status_code = ghttp_status_code(request);
 
+    //get reqid
+    strcpy(req_id, ghttp_get_header(request, "X-Reqid"));
+
+    //get remote ip
+    int socket = ghttp_get_socket(request);
+
+    struct sockaddr_storage addr;
+    socklen_t socket_len = sizeof(addr);
+    getpeername(socket, (struct sockaddr *) &addr, &socket_len);
+    if (addr.ss_family == AF_INET) {
+        //ipv4
+        struct sockaddr_in *s = (struct sockaddr_in *) &addr;
+        remote_port = ntohs(s->sin_port);
+        inet_ntop(AF_INET, &s->sin_addr, remote_ip, sizeof(remote_ip));
+    } else {
+        //ipv6
+        struct sockaddr_in6 *s = (struct sockaddr_in6 *) &addr;
+        remote_port = ntohs(s->sin6_port);
+        inet_ntop(AF_INET6, &s->sin6_addr, remote_ip, sizeof(remote_ip));
+    }
+
+    //bytes_sent
+    bytes_sent = file_size;
     //destroy
     ghttp_request_destroy(request);
 
+    status_code = put_ret->status_code;
+    duration = (time(NULL) - start_time) * 1000;
+
+    qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
+                     bytes_sent, upload_type, file_size);
+
     return 0;
 }
+
+
+/**
+ * report the upload status (failed, success or cancelled) to remote cloud
+ * @param upload_token upload token
+ * @param status_code  upload request status code
+ * @param reqid        upload response header X-Reqid
+ * @param host         upload remote server host
+ * @param remote_ip    upload remote server ip
+ * @param port         upload remote server port
+ * @param duration     upload last time in milliseconds
+ * @param up_time      upload timestamp in seconds
+ * @param bytes_sent   upload total bytes sent
+ * @param up_type      upload sdk name
+ * @param file_size    upload file size
+ */
+void qn_upload_report(const char *upload_token, int status_code, char *req_id, char *remote_host, char *remote_ip,
+                      int remote_port, long duration, long upload_time, long bytes_sent, char *upload_type,
+                      long file_size) {
+
+    if (!req_id) {
+        req_id = "";
+    }
+
+    if (!remote_ip) {
+        remote_ip = "";
+    }
+
+    size_t post_body_len = snprintf(NULL, 0, "%d", status_code) + snprintf(NULL, 0, "%s", req_id) +
+                           snprintf(NULL, 0, "%s", remote_host) + snprintf(NULL, 0, "%s", remote_ip) +
+                           snprintf(NULL, 0, "%d", remote_port) + snprintf(NULL, 0, "%ld", duration) +
+                           snprintf(NULL, 0, "%ld", upload_time) + snprintf(NULL, 0, "%ld", bytes_sent) +
+                           snprintf(NULL, 0, "%s", upload_type) + snprintf(NULL, 0, "%ld", file_size) + 9;
+    char *post_body = (char *) malloc(sizeof(char) * (post_body_len + 1));
+    if (!post_body) {
+        //fail to alloc memory
+        return;
+    }
+    sprintf(post_body, "%d,%s,%s,%s,%d,%ld,%ld,%ld,%s,%ld", status_code, req_id, remote_host, remote_ip, remote_port,
+            duration, upload_time, bytes_sent, upload_type, file_size);
+    post_body[post_body_len] = 0;
+
+//    printf("%s\n", post_body);
+
+//    printf("upload_token: %s\n", upload_token);
+//    printf("status_code: %d\n", status_code);
+//    printf("req_id: %s\n", req_id);
+//    printf("remote_host: %s\n", remote_host);
+//    printf("remote_ip: %s\n", remote_ip);
+//    printf("remote_port: %d\n", remote_port);
+//    printf("upload_type: %s\n", upload_type);
+//    printf("duration: %ld\n", duration);
+//    printf("upload_time: %ld\n", upload_time);
+//    printf("bytes_sent: %ld\n", bytes_sent);
+//    printf("file_size: %ld\n", file_size);
+
+    ghttp_request *request = NULL;
+    request = ghttp_request_new();
+    if (!request) {
+        //new request error
+        free(post_body);
+        return;
+    }
+
+    size_t auth_header_len = strlen("UpToken ") + strlen(upload_token);
+    char *auth_header = (char *) malloc(sizeof(char) * (auth_header_len + 1));
+    if (!auth_header) {
+        //new header error
+        free(post_body);
+        return;
+    }
+    sprintf(auth_header, "UpToken %s", upload_token);
+
+    ghttp_set_uri(request, QN_REPORT_HOST);
+    ghttp_set_header(request, "Content-Type", "text/plain; charset=utf-8");
+    ghttp_set_header(request, "Authorization", auth_header);
+    ghttp_set_header(request, "User-Agent", QN_USER_AGENT);
+    ghttp_set_type(request, ghttp_type_post);
+    ghttp_set_body(request, post_body, post_body_len);
+    ghttp_prepare(request);
+    ghttp_status status = ghttp_process(request);
+    if (status != ghttp_error && ghttp_status_code(request) == 200) {
+        printf("report success\n");
+    } else {
+        printf("report error\n");
+    }
+    ghttp_request_destroy(request);
+    free(auth_header);
+    free(post_body);
+}
+
