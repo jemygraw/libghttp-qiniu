@@ -117,8 +117,9 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     char *upload_type = "armsdk";
     long file_size = 0;
 
-    memset(req_id, X_REQID_LEN, 0);
-    memset(remote_ip, INET6_ADDRSTRLEN, 0);
+    //set default to empty string
+    strcpy(req_id, "");
+    strcpy(remote_ip, "");
     //end
 
     int i;
@@ -323,15 +324,6 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
 void qn_upload_report(const char *upload_token, int status_code, char *req_id, char *remote_host, char *remote_ip,
                       int remote_port, long duration, long upload_time, long bytes_sent, char *upload_type,
                       long file_size) {
-
-    if (!req_id) {
-        req_id = "";
-    }
-
-    if (!remote_ip) {
-        remote_ip = "";
-    }
-
     size_t post_body_len = snprintf(NULL, 0, "%d", status_code) + snprintf(NULL, 0, "%s", req_id) +
                            snprintf(NULL, 0, "%s", remote_host) + snprintf(NULL, 0, "%s", remote_ip) +
                            snprintf(NULL, 0, "%d", remote_port) + snprintf(NULL, 0, "%ld", duration) +
