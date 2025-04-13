@@ -11,9 +11,11 @@ include_directories(/usr/local/include)
 link_libraries(ghttp)
 
 set(SOURCE_FILES
-        ghttp-qiniu/ghttp-qiniu.c
-        main.c
-
+        qiniu_utils.c
+        ghttp-qiniu/form-upload.c
+        ghttp-qiniu/chunk-upload.c
+        examples/form-upload.c
+        examples/chunk-upload.c
 )
 
 add_executable(libghttp_qiniu ${SOURCE_FILES})

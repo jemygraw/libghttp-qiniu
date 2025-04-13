@@ -1,0 +1,68 @@
+#include "ghttp-qiniu.h"
+
+// create a duplicate string
+char *qn_strdup(const char *src)
+{
+    char *dst = NULL;
+    if (src == NULL)
+    {
+        return NULL;
+    }
+    dst = (char *)calloc(strlen(src) + 1, sizeof(char));
+    if (dst == NULL)
+    {
+        return NULL;
+    }
+    strncpy(dst, src, strlen(src));
+    return dst;
+}
+
+// create a fixed length of random string
+char *qn_random_str(int len)
+{
+    int i = 0, val = 0;
+    const char *base = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    int base_len = (int)strlen(base);
+
+    char *random_str = (char *)malloc(sizeof(char) * (len + 1));
+    srand((unsigned int)time(NULL));
+    for (; i < len; i++)
+    {
+        val = 1 + (int)((float)(base_len - 1) * rand() / (RAND_MAX + 1.0));
+        random_str[i] = base[val];
+    }
+    random_str[len] = 0;
+    return random_str;
+}
+
+/*
+ * form body concatenation function
+ *
+ * @param dst_buffer     a buffer used to make concatenation of strings
+ * @param src_buffer     a buffer to be concated to the dst_buffer
+ * @param src_buffer_len src_buffer length
+ *
+ * @return the end pointer of the dst_buffer, used for the next concatenation
+ * */
+char *qn_memconcat(char *dst_buffer, const char *src_buffer, size_t src_buffer_len)
+{
+    memcpy(dst_buffer, src_buffer, src_buffer_len);
+    char *p_end = dst_buffer + src_buffer_len;
+    return p_end;
+}
+
+void qn_free_putret(qn_putret *put_ret)
+{
+    if (put_ret == NULL)
+    {
+        return;
+    }
+    if (put_ret->resp_body)
+    {
+        free(put_ret->resp_body);
+    }
+    if (put_ret->error)
+    {
+        free((void *)put_ret->error);
+    }
+}
