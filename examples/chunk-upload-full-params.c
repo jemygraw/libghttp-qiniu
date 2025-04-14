@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     char *bucket_name = "xdb-backup";
     char *local_path = "files/sample.mp4";
     char *upload_token = "xxx";
-     char *file_key = "qiniu/sample.mp4";
+    char *file_key = "qiniu/sample.mp4";
     char *mime_type = "video/mp4";
 
     qn_putret put_ret = {
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     {
         printf("==> upload error: %s\n", put_ret.error);
     }
-        // TODO
+    // TODO
     // parse put_ret->resp_body to json
     //
     // free putret
