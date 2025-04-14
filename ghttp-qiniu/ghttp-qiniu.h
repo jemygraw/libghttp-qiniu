@@ -6,14 +6,19 @@
 #define LIBGHTTP_QINIU_GHTTP_QINIU_H
 
 #include <stdio.h>
+#include <time.h>
 #include <ghttp.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
 // multi-data form body size, default is 512KB
 static size_t QN_MULTIDATA_FORM_SIZE = 512 * 1024;
+
+// chunk upload chunk size, default is 1MB
+static size_t QN_CHUNK_SIZE = 1024 * 1024;
 
 // qiniu storage upload host
 static char *QN_UPLOAD_HOST = "http://upload.qiniup.com";
@@ -41,17 +46,31 @@ typedef struct __qn_put_ret
 // qiniu chunk part
 typedef struct __qn_chunk_part
 {
+    const char *error;
     char *etag;
     int part_number;
 } qn_chunkpart;
 
-// qiniu recorder body
-typedef struct __qn_recorder_body
+// qiniu chunk recorder body
+typedef struct __qn_chunk_recorder
 {
-    long int last_modified;
-    long int file_size;
-    qn_chunkpart parts[];
-} qn_recorderbody;
+    const char *error;
+    char *upload_id;
+    time_t last_modified;
+    long file_size;
+    long expire_at;
+    int part_count;
+    qn_chunkpart *parts;
+} qn_chunkrecorder;
+
+// qiniu complete chunk upload body
+typedef struct __qn_chunk_payload
+{
+    // payload bytes, free after use
+    char *bytes;
+    // payload error, free after use
+    const char *error;
+} qn_chunkpayload;
 
 // qiniu init chunk response
 typedef struct __qn_init_chunk_ret
@@ -66,16 +85,25 @@ typedef struct __qn_put_extra
 {
     // customer defined extra params
     // key should startswith x:
-    qn_map *extra_params;
-    int extra_params_count;
+    qn_map *custom_vars;
+    int custom_vars_count;
+    // qiniu defined metadata params
+    // key should startswith x-qn-meta-
+    qn_map *metadata;
+    int metadata_count;
     // mine type of file
     const char *mime_type;
     // recorder file key of resume upload
     const char *recorder_key;
 } qn_putextra;
 
+void qn_debug(const char *format, ...);
+
 // create a duplicate string
 char *qn_strdup(const char *src);
+
+// create file base name string
+char *qn_file_basename(const char *file_path);
 
 // create random string for form boundary
 char *qn_random_str(int len);

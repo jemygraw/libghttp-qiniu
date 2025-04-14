@@ -19,7 +19,7 @@ int main(int argc, char **argv)
         p += 1;
     }
 
-    char *local_path = "examples/chunk-upload.c";
+    char *local_path = "examples/chunk-upload.cxx";
     char *upload_token = "xxx";
     char *file_key = "qiniu/chunk-upload.c";
     char *mime_type = "text/plain";
@@ -31,8 +31,8 @@ int main(int argc, char **argv)
 
     qn_putextra putextra = {
         .mime_type = mime_type,
-        .extra_params = params,
-        .extra_params_count = 2,
+        .custom_vars = params,
+        .custom_vars_count = 2,
     };
 
     // upload with file key, mime type, extra params

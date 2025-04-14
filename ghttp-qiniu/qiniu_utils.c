@@ -1,5 +1,19 @@
 #include "ghttp-qiniu.h"
 
+// print the debug log
+void qn_debug(const char *format, ...)
+{
+    const char *debug_on = getenv("QINIU_DEBUG");
+    if (!debug_on || strcmp(debug_on, "1") == -1)
+    {
+        return;
+    }
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+}
+
 // create a duplicate string
 char *qn_strdup(const char *src)
 {
@@ -15,6 +29,22 @@ char *qn_strdup(const char *src)
     }
     strncpy(dst, src, strlen(src));
     return dst;
+}
+
+// create a file base name string
+char *qn_file_basename(const char *file_path)
+{
+    char *file_name = NULL;
+    if (file_path == NULL)
+    {
+        return NULL;
+    }
+    file_name = strrchr(file_path, '/');
+    if (file_name == NULL)
+    {
+        return qn_strdup(file_path);
+    }
+    return qn_strdup(file_name + 1);
 }
 
 // create a fixed length of random string

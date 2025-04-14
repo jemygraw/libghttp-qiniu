@@ -66,15 +66,15 @@ char *qn_addformfield(char *dst_buffer, char *form_boundary, size_t form_boundar
  * @param upload_token       upload token get from remote server
  * @param file_key           the file name in the storage bucket, must be unique for each file
  * @param mime_type          the optional mime type to specify when upload the file, (can be NULL)
- * @param extra_params       the extra params which may contain some service-specific values
- * @param extra_params_count the count of the extra params
+ * @param custom_vars       the extra params which may contain some service-specific values
+ * @param custom_vars_count the count of the extra params
  * @param put_ret            the file upload response from qiniu storage server
  *
  * @return 0 on success, -1 on failure
  * */
 int qn_upload_file(const char *local_path, const char *upload_token, const char *file_key, qn_putextra *put_extra, qn_putret *put_ret)
 {
-    int exit_code = 0;
+    int ret = 0;
     char *form_content_type = NULL;
     char *file_body = NULL;
     const char *mime_type = NULL;
@@ -105,9 +105,9 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     char *random_suffix = qn_random_str(16);
     size_t form_boundary_len = strlen(form_prefix) + 16;
     char *form_boundary = (char *)calloc(form_boundary_len + 1, sizeof(char));
-    snprintf(form_boundary, form_boundary_len+1, "%s%s", form_prefix, random_suffix);
+    snprintf(form_boundary, form_boundary_len + 1, "%s%s", form_prefix, random_suffix);
     free(random_suffix);
- 
+
     // init the form data
     size_t form_data_len = 0;
     char *form_data = (char *)calloc(QN_MULTIDATA_FORM_SIZE, sizeof(char));
@@ -128,10 +128,10 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, "token", (char *)upload_token,
                                   strlen(upload_token), NULL, &form_data_len);
 
-    if (put_extra && put_extra->extra_params_count > 0)
+    if (put_extra && put_extra->custom_vars_count > 0)
     {
-        qn_map *p = put_extra->extra_params;
-        for (i = 0; i < put_extra->extra_params_count; i++)
+        qn_map *p = put_extra->custom_vars;
+        for (i = 0; i < put_extra->custom_vars_count; i++)
         {
             char *param_key = p->key;
             if (strncmp(param_key, "x:", 2) == 0)
@@ -148,12 +148,12 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     fp = fopen(local_path, "rb+");
     if (fp == NULL)
     {
-        put_ret->error = "open local file error";
+        put_ret->error = qn_strdup("open local file error");
         status_code = -3;
         duration = (time(NULL) - start_time) * 1000;
         qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
                          bytes_sent, upload_type, file_size);
-        exit_code = -1;
+        ret = -1;
         goto cleanup;
     }
 
@@ -172,7 +172,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
 
         qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
                          bytes_sent, upload_type, file_size);
-        exit_code = -1;
+        ret = -1;
         goto cleanup;
     }
     fclose(fp);
@@ -193,7 +193,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     const char *content_type_prefix = "multipart/form-data; boundary=";
     size_t form_content_type_len = strlen(content_type_prefix) + form_boundary_len;
     form_content_type = (char *)calloc(form_content_type_len + 1, sizeof(char));
-    snprintf(form_content_type, form_content_type_len+1, "%s%s", content_type_prefix, form_boundary);
+    snprintf(form_content_type, form_content_type_len + 1, "%s%s", content_type_prefix, form_boundary);
 
     // printf("%s\n",form_content_type);
 
@@ -201,13 +201,13 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     request = ghttp_request_new();
     if (request == NULL)
     {
-        put_ret->error = "new request error";
+        put_ret->error = qn_strdup("new request error");
         status_code = -1004;
         duration = (time(NULL) - start_time) * 1000;
 
         qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
                          bytes_sent, upload_type, file_size);
-        exit_code = -1;
+        ret = -1;
         goto cleanup;
     }
 
@@ -232,7 +232,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
         qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
                          bytes_sent, upload_type, file_size);
 
-        exit_code = -1;
+        ret = -1;
         goto cleanup;
     }
 
@@ -303,7 +303,7 @@ cleanup:
     {
         free(form_content_type);
     }
-    return exit_code;
+    return ret;
 }
 
 /**
