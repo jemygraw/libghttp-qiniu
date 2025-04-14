@@ -49,6 +49,7 @@ typedef struct __qn_chunk_part
     const char *error;
     char *etag;
     int part_number;
+    int status_code;
 } qn_chunkpart;
 
 // qiniu chunk recorder body
@@ -75,6 +76,7 @@ typedef struct __qn_chunk_payload
 // qiniu init chunk response
 typedef struct __qn_init_chunk_ret
 {
+    int status_code;
     char *upload_id;
     long int expire_at;
     const char *error;

@@ -309,12 +309,11 @@ int qn_init_chunk_upload(const char *bucket_name, const char *upload_token, cons
     // make post url
     if (file_key)
     {
-        object_name = (char *)file_key;
+        object_name = http_base64_encode(file_key);
     }
-    char *encoded_object_name = http_base64_encode(object_name);
-    size_t post_uri_len = strlen(QN_UPLOAD_HOST) + strlen(bucket_name) + strlen(encoded_object_name) + 26;
+    size_t post_uri_len = strlen(QN_UPLOAD_HOST) + strlen(bucket_name) + strlen(object_name) + 26;
     post_uri = (char *)calloc(post_uri_len + 1, sizeof(char));
-    snprintf(post_uri, post_uri_len + 1, "%s/buckets/%s/objects/%s/uploads", QN_UPLOAD_HOST, bucket_name, encoded_object_name);
+    snprintf(post_uri, post_uri_len + 1, "%s/buckets/%s/objects/%s/uploads", QN_UPLOAD_HOST, bucket_name, object_name);
     qn_debug("[Qiniu] init chunk upload uri: %s\n", post_uri);
     // make auth token
     size_t auth_token_len = strlen(upload_token) + strlen("Uptoken ");
@@ -334,6 +333,7 @@ int qn_init_chunk_upload(const char *bucket_name, const char *upload_token, cons
     ghttp_set_type(request, ghttp_type_post);
     ghttp_prepare(request);
     ghttp_status status = ghttp_process(request);
+    init_ret->status_code = ghttp_status_code(request);
     if (status == ghttp_error)
     {
         init_ret->error = ghttp_get_error(request);
@@ -372,7 +372,10 @@ int qn_init_chunk_upload(const char *bucket_name, const char *upload_token, cons
 cleanup:
     free(post_uri);
     free(auth_token);
-    free(encoded_object_name);
+    if (file_key)
+    {
+        free(object_name);
+    }
     if (request)
     {
         ghttp_request_destroy(request);
@@ -403,12 +406,11 @@ int qn_upload_chunk_bytes(const char *bucket_name, const char *upload_token, con
     // make post url
     if (file_key)
     {
-        object_name = (char *)file_key;
+        object_name = http_base64_encode(file_key);
     }
-    char *encoded_object_name = http_base64_encode(object_name);
-    size_t post_uri_len = strlen(QN_UPLOAD_HOST) + strlen(bucket_name) + strlen(encoded_object_name) + strlen(upload_id) + 36;
+    size_t post_uri_len = strlen(QN_UPLOAD_HOST) + strlen(bucket_name) + strlen(object_name) + strlen(upload_id) + 36;
     post_uri = (char *)calloc(post_uri_len, sizeof(char));
-    sprintf(post_uri, "%s/buckets/%s/objects/%s/uploads/%s/%d", QN_UPLOAD_HOST, bucket_name, encoded_object_name, upload_id, part_number);
+    sprintf(post_uri, "%s/buckets/%s/objects/%s/uploads/%s/%d", QN_UPLOAD_HOST, bucket_name, object_name, upload_id, part_number);
     qn_debug("[Qiniu] upload chunk bytes uri: %s\n", post_uri);
     // make auth token
     size_t auth_token_len = strlen(upload_token) + strlen("Uptoken ");
@@ -433,6 +435,7 @@ int qn_upload_chunk_bytes(const char *bucket_name, const char *upload_token, con
     ghttp_set_body(request, chunk_bytes, chunk_size);
     ghttp_prepare(request);
     ghttp_status status = ghttp_process(request);
+    part->status_code = ghttp_status_code(request);
     if (status == ghttp_error)
     {
         part->error = ghttp_get_error(request);
@@ -468,7 +471,10 @@ int qn_upload_chunk_bytes(const char *bucket_name, const char *upload_token, con
 cleanup:
     free(post_uri);
     free(auth_token);
-    free(encoded_object_name);
+    if (file_key)
+    {
+        free(object_name);
+    }
     if (request)
     {
         ghttp_request_destroy(request);
@@ -487,7 +493,7 @@ cleanup:
 // complete the chunk upload
 // https://developer.qiniu.com/kodo/6368/complete-multipart-upload
 int qn_finish_chunk_upload(const char *local_path, const char *bucket_name, const char *upload_token, const char *file_key,
-                           const char *upload_id, qn_chunkrecorder *recorder, qn_putextra *put_extra, qn_putret *put_ret)
+                           qn_chunkrecorder *recorder, qn_putextra *put_extra, qn_putret *put_ret)
 {
     int ret = 0;
     char *resp_body = NULL;
@@ -499,12 +505,12 @@ int qn_finish_chunk_upload(const char *local_path, const char *bucket_name, cons
     // make post url
     if (file_key)
     {
-        object_name = (char *)file_key;
+        object_name = http_base64_encode(file_key);
     }
-    char *encoded_object_name = http_base64_encode(file_key);
-    size_t post_uri_len = strlen(QN_UPLOAD_HOST) + strlen(bucket_name) + strlen(encoded_object_name) + strlen(upload_id) + 27;
+    const char *upload_id = recorder->upload_id;
+    size_t post_uri_len = strlen(QN_UPLOAD_HOST) + strlen(bucket_name) + strlen(object_name) + strlen(upload_id) + 27;
     post_uri = (char *)calloc(post_uri_len + 1, sizeof(char));
-    snprintf(post_uri, post_uri_len + 1, "%s/buckets/%s/objects/%s/uploads/%s", QN_UPLOAD_HOST, bucket_name, encoded_object_name,
+    snprintf(post_uri, post_uri_len + 1, "%s/buckets/%s/objects/%s/uploads/%s", QN_UPLOAD_HOST, bucket_name, object_name,
              upload_id);
     qn_debug("[Qiniu] finish chunk upload uri: %s\n", post_uri);
     // make auth token
@@ -537,6 +543,7 @@ int qn_finish_chunk_upload(const char *local_path, const char *bucket_name, cons
     ghttp_set_body(request, req_body.bytes, strlen(req_body.bytes));
     ghttp_prepare(request);
     ghttp_status status = ghttp_process(request);
+    put_ret->status_code = ghttp_status_code(request);
     if (status == ghttp_error)
     {
         put_ret->error = ghttp_get_error(request);
@@ -568,11 +575,13 @@ int qn_finish_chunk_upload(const char *local_path, const char *bucket_name, cons
     // set put ret
     put_ret->resp_body = resp_body;
     put_ret->resp_body_len = resp_body_len;
-    put_ret->status_code = status;
 cleanup:
     free(post_uri);
     free(auth_token);
-    free(encoded_object_name);
+    if (file_key)
+    {
+        free(object_name);
+    }
     if (request)
     {
         ghttp_request_destroy(request);
@@ -603,7 +612,7 @@ int qn_chunk_upload_file(const char *local_path, const char *bucket_name, const 
         .upload_id = NULL,
     };
     // get the recorder key
-    if (put_extra->recorder_key)
+    if (put_extra && put_extra->recorder_key)
     {
         recorder_key = qn_strdup(put_extra->recorder_key);
         qn_debug("[Qiniu] use user specified recorder key: %s\n", recorder_key);
@@ -629,6 +638,7 @@ int qn_chunk_upload_file(const char *local_path, const char *bucket_name, const 
         {
             qn_debug("[Qiniu] init chunk upload error: %s\n", initret.error);
             put_ret->error = qn_strdup(initret.error);
+            put_ret->status_code = initret.status_code;
             goto cleanup;
         }
         qn_debug("[Qiniu] init chunk upload success, upload_id: %s, expire_at: %ld\n", initret.upload_id, initret.expire_at);
@@ -662,18 +672,28 @@ int qn_chunk_upload_file(const char *local_path, const char *bucket_name, const 
             if (ret == -1)
             {
                 put_ret->error = qn_strdup(part.error);
+                put_ret->status_code = part.status_code;
+                if (strcmp(put_ret->error, "no such uploadId") == 0)
+                {
+                    // remove the recorder file when invalid
+                    remove(recorder_key);
+                }
                 ret = -1;
                 goto cleanup;
             }
             recorder.parts[i].etag = part.etag;
             qn_flush_chunk_recorder(recorder_key, &recorder);
         }
+        else
+        {
+            qn_debug("[Qiniu] chunk part %d/%d has been uploaded, etag: %s\n", part.part_number, recorder.part_count, part.etag);
+        }
     }
     // complete the chunk upload
-    ret = qn_finish_chunk_upload(local_path, bucket_name, upload_token, file_key, recorder.upload_id, &recorder, put_extra,
-                                 put_ret);
+    ret = qn_finish_chunk_upload(local_path, bucket_name, upload_token, file_key, &recorder, put_extra, put_ret);
     if (ret == -1)
     {
+        qn_debug("[Qiniu] finish chunk upload error: %s\n", put_ret->error);
         if (strcmp(put_ret->error, "no such uploadId") == 0)
         {
             // remove the recorder file when invalid
