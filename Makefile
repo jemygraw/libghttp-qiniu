@@ -1,8 +1,8 @@
 INCLUDE_PATH=-Ighttp-qiniu
-FORM_SOURCE_FILES=\
+FORM_FULL_PARAMS_SOURCE_FILES=\
 	ghttp-qiniu/qiniu_utils.c\
 	ghttp-qiniu/form-upload.c\
-	examples/form-upload.c
+	examples/form-upload-full-params.c
 
 CHUNK_USING_HASH_AS_KEY_SOURCE_FILES=\
 	ghttp-qiniu/qiniu_utils.c\
@@ -14,12 +14,19 @@ CHUNK_FULL_PARAMS_SOURCE_FILES=\
 	ghttp-qiniu/chunk-upload.c\
 	examples/chunk-upload-full-params.c
 
+all: prepare form_full_params chunk_full_params chunk_using_hash_as_key
 
-form: $(FORM_SOURCE_FILES)
-	gcc -std=c99 -g $^ -o form-upload $(INCLUDE_PATH) -lghttp -lcjson
+prepare:
+	$(shell mkdir -p bin/)
+
+clean:
+	$(shell rm -rf bin/)
+
+form_full_params: $(FORM_FULL_PARAMS_SOURCE_FILES)
+	gcc -std=c99 -g $^ -o bin/form-upload-full-params $(INCLUDE_PATH) -lghttp -lcjson
 
 chunk_using_hash_as_key: $(CHUNK_USING_HASH_AS_KEY_SOURCE_FILES)
-	gcc -std=c99 -g $^ -o chunk-upload-using-hash-as-key $(INCLUDE_PATH) -lghttp -lcjson
+	gcc -std=c99 -g $^ -o bin/chunk-upload-using-hash-as-key $(INCLUDE_PATH) -lghttp -lcjson
 
 chunk_full_params: $(CHUNK_FULL_PARAMS_SOURCE_FILES)
-	gcc -std=c99 -g $^ -o chunk-upload-full-params $(INCLUDE_PATH) -lghttp -lcjson
+	gcc -std=c99 -g $^ -o bin/chunk-upload-full-params $(INCLUDE_PATH) -lghttp -lcjson

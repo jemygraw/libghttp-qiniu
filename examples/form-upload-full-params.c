@@ -1,6 +1,6 @@
-
-
-#include "ghttp-qiniu.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ghttp-qiniu.h>
 
 int main(int argc, char **argv)
 {
@@ -20,12 +20,10 @@ int main(int argc, char **argv)
     // the name must starts with x-qn-meta-
     q->key = "x-qn-meta-org-name";
     q->value = "qiniu cloud";
-
-    char *bucket_name = "xdb-backup";
-    char *local_path = "files/sample.mp4";
+    char *local_path = "files/sample.png";
     char *upload_token = "xxx";
-     char *file_key = "qiniu/sample.mp4";
-    char *mime_type = "video/mp4";
+    char *file_key = "sample.png";
+    char *mime_type = "image/png";
 
     qn_putret put_ret = {
         .error = NULL,
@@ -40,18 +38,20 @@ int main(int argc, char **argv)
         .metadata_count = 1,
     };
 
-    int ret = qn_chunk_upload_file(local_path, bucket_name, upload_token, file_key, &putextra, &put_ret);
+    // upload with file key, mime type, extra custom_vars
+    printf("upload with all custom_vars\n");
+    int ret = qn_upload_file(local_path, upload_token, file_key, &putextra, &put_ret);
     printf("==> upload result: %d, error=%s\n", ret, put_ret.error);
     if (ret == 0)
     {
-        printf("==> status code: %d\n", put_ret.status_code);
+        printf("==> status code:%d \n", put_ret.status_code);
         printf("==> resp body: %s\n", put_ret.resp_body);
     }
     else
     {
         printf("==> upload error: %s\n", put_ret.error);
     }
-        // TODO
+    // TODO
     // parse put_ret->resp_body to json
     //
     // free putret
@@ -60,4 +60,5 @@ int main(int argc, char **argv)
     // free extra params
     free(custom_vars);
     free(metadata);
+    return 0;
 }

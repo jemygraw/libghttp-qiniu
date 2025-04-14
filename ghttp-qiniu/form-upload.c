@@ -128,6 +128,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, "token", (char *)upload_token,
                                   strlen(upload_token), NULL, &form_data_len);
 
+    // add custom vars
     if (put_extra && put_extra->custom_vars_count > 0)
     {
         qn_map *p = put_extra->custom_vars;
@@ -135,6 +136,23 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
         {
             char *param_key = p->key;
             if (strncmp(param_key, "x:", 2) == 0)
+            {
+                char *param_value = p->value;
+                form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, param_key, param_value,
+                                              strlen(param_value), NULL, &form_data_len);
+            }
+            p++;
+        }
+    }
+
+    // add metadata
+    if (put_extra && put_extra->metadata_count > 0)
+    {
+        qn_map *p = put_extra->metadata;
+        for (i = 0; i < put_extra->metadata_count; i++)
+        {
+            char *param_key = p->key;
+            if (strncmp(param_key, "x-qn-meta-", 10) == 0)
             {
                 char *param_value = p->value;
                 form_data_p = qn_addformfield(form_data_p, form_boundary, form_boundary_len, param_key, param_value,
