@@ -1,6 +1,7 @@
 #include "ghttp_qiniu.h"
 
-// print the debug log
+// print the debug message when set QINIU_DEBUG=1
+// export QINIU_DEBUG=1 in your shell and default to 0
 void qn_debug(const char *format, ...)
 {
     const char *debug_on = getenv("QINIU_DEBUG");
@@ -14,7 +15,7 @@ void qn_debug(const char *format, ...)
     va_end(args);
 }
 
-// create a duplicate string
+// create a duplicate string for save memory cleanup
 char *qn_strdup(const char *src)
 {
     char *dst = NULL;
@@ -81,6 +82,7 @@ char *qn_memconcat(char *dst_buffer, const char *src_buffer, size_t src_buffer_l
     return p_end;
 }
 
+// for qn_putret object memory cleanup
 void qn_free_putret(qn_putret *put_ret)
 {
     if (put_ret == NULL)

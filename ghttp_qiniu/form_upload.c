@@ -1,7 +1,3 @@
-//
-// Created by jemy on 19/12/2017.
-//
-
 #include <arpa/inet.h>
 #include "ghttp_qiniu.h"
 
@@ -65,9 +61,7 @@ char *qn_addformfield(char *dst_buffer, char *form_boundary, size_t form_boundar
  * @param local_path         local file path
  * @param upload_token       upload token get from remote server
  * @param file_key           the file name in the storage bucket, must be unique for each file
- * @param mime_type          the optional mime type to specify when upload the file, (can be NULL)
- * @param custom_vars       the extra params which may contain some service-specific values
- * @param custom_vars_count the count of the extra params
+ * @param put_extra          the put extra info like mime type, custom vars, metadata etc
  * @param put_ret            the file upload response from qiniu storage server
  *
  * @return 0 on success, -1 on failure
@@ -78,6 +72,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     char *form_content_type = NULL;
     char *file_body = NULL;
     const char *mime_type = NULL;
+    ghttp_request *request = NULL;
     // define reporting fields
     int status_code = 0;
     char req_id[X_REQID_LEN];
@@ -184,7 +179,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     size_t read_num = fread(file_body, sizeof(char), file_len, fp);
     if (read_num != file_len)
     {
-        put_ret->error = "read file size unmatch";
+        put_ret->error = qn_strdup("read file size unmatch");
         status_code = -3;
         duration = (time(NULL) - start_time) * 1000;
 
@@ -195,6 +190,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     }
     fclose(fp);
 
+    // add mime type
     if (put_extra && put_extra->mime_type)
     {
         mime_type = put_extra->mime_type;
@@ -203,6 +199,7 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
                                   &form_data_len);
     free(file_body);
     file_body = NULL;
+    // add the suffix
     form_data_p = qn_memconcat(form_data_p, form_boundary, form_boundary_len);
     qn_memconcat(form_data_p, "--\r\n", 4);
     form_data_len += form_boundary_len + 4;
@@ -214,24 +211,17 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     snprintf(form_content_type, form_content_type_len + 1, "%s%s", content_type_prefix, form_boundary);
 
     // printf("%s\n",form_content_type);
-
-    ghttp_request *request = NULL;
     request = ghttp_request_new();
     if (request == NULL)
     {
         put_ret->error = qn_strdup("new request error");
         status_code = -1004;
         duration = (time(NULL) - start_time) * 1000;
-
         qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
                          bytes_sent, upload_type, file_size);
         ret = -1;
         goto cleanup;
     }
-
-    //    fp = fopen("test.req.txt", "wb+");
-    //    printf("write: %d\n", fwrite(form_data, 1, form_data_len, fp));
-    //    fclose(fp);
 
     ghttp_set_uri(request, QN_UPLOAD_HOST);
     ghttp_set_header(request, "Content-Type", form_content_type);
@@ -240,16 +230,14 @@ int qn_upload_file(const char *local_path, const char *upload_token, const char 
     ghttp_set_body(request, form_data, form_data_len);
     ghttp_prepare(request);
     ghttp_status status = ghttp_process(request);
+    put_ret->status_code=ghttp_status_code(request);
     if (status == ghttp_error)
     {
         put_ret->error = ghttp_get_error(request);
-        ghttp_request_destroy(request);
         status_code = -1;
         duration = (time(NULL) - start_time) * 1000;
-
         qn_upload_report(upload_token, status_code, req_id, remote_host, remote_ip, remote_port, duration, upload_time,
                          bytes_sent, upload_type, file_size);
-
         ret = -1;
         goto cleanup;
     }
@@ -400,11 +388,11 @@ void qn_upload_report(const char *upload_token, int status_code, char *req_id, c
     ghttp_status status = ghttp_process(request);
     if (status != ghttp_error && ghttp_status_code(request) == 200)
     {
-        printf("report success\n");
+        qn_debug("[Qiniu] report success\n");
     }
     else
     {
-        printf("report error\n");
+        qn_debug("[Qiniu] report error\n");
     }
     ghttp_request_destroy(request);
     free(auth_header);

@@ -1,5 +1,3 @@
-
-
 #include "ghttp_qiniu.h"
 #include <pthread.h>
 
@@ -44,8 +42,6 @@ int main(int argc, char **argv)
         perror("create thread failed");
         return 1;
     }
-
-    // 等待线程结束
     if (pthread_join(thread_id, &thread_result) != 0)
     {
         perror("wait thread failed");
