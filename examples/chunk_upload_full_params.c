@@ -36,6 +36,7 @@ int main(int argc, char **argv)
         .custom_vars_count = 2,
         .metadata = metadata,
         .metadata_count = 1,
+        .recorder_key = NULL,
     };
 
     int ret = qn_chunk_upload_file(local_path, bucket_name, upload_token, file_key, &putextra, &put_ret);

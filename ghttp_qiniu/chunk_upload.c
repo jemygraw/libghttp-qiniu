@@ -183,7 +183,7 @@ int qn_flush_chunk_recorder(const char *recorder_key, qn_chunkrecorder *recorder
         cJSON_AddItemToArray(parts_obj, part_obj);
     }
     cJSON_AddItemToObject(json, "parts", parts_obj);
-    const char *json_str = cJSON_Print(json);
+    const char *json_str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
     // flush to local file
     FILE *fp = fopen(recorder_key, "w+");
@@ -268,7 +268,7 @@ int qn_init_chunk_recorder(const char *recorder_key, const char *local_path, qn_
     // create a new recorder when not found or expired
     if (stat(local_path, &local_file_stat) != 0)
     {
-        recorder->error = qn_strdup("stat local path error");
+        recorder->error = qn_strdup("stat local file error");
         ret = -1;
         goto cleanup;
     }

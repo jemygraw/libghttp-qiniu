@@ -21,7 +21,7 @@ int main(int argc, char **argv)
     q->key = "x-qn-meta-org-name";
     q->value = "qiniu cloud";
     char *local_path = "files/sample.png";
-    char *upload_token = "1nSNkZ-ZvkpdQcBWAn8fZjJIFeLBd4WCNwVO3-id:xgNcYVYqZWpi_c_2Jtp84WFAbeE=:eyJzY29wZSI6InhkYi1iYWNrdXAiLCJkZWFkbGluZSI6MTc0NDYyNzAyNn0=";
+    char *upload_token = "xxx";
     char *file_key = "sample.png";
     char *mime_type = "image/png";
 
