@@ -3,7 +3,7 @@
 //
 
 #include <arpa/inet.h>
-#include "ghttp-qiniu.h"
+#include "ghttp_qiniu.h"
 
 /*
  * assemble the multi-form body

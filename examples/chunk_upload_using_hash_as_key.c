@@ -1,6 +1,6 @@
 
 
-#include "ghttp-qiniu.h"
+#include "ghttp_qiniu.h"
 
 int main(int argc, char **argv)
 {

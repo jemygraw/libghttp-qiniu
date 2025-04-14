@@ -1,4 +1,4 @@
-#include "ghttp-qiniu.h"
+#include "ghttp_qiniu.h"
 #include <ghttp.h>
 #include <ghttp/http_base64.h>
 #include <cjson/cJSON.h>

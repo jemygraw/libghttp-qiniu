@@ -1,4 +1,4 @@
-#include "ghttp-qiniu.h"
+#include "ghttp_qiniu.h"
 
 // print the debug log
 void qn_debug(const char *format, ...)
