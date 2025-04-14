@@ -31,7 +31,7 @@ void *upload_file(void *arg)
     //
     // free putret
     qn_free_putret(&put_ret);
-    pthread_exit(0);
+    pthread_exit((void *)ret);
 }
 
 int main(int argc, char **argv)

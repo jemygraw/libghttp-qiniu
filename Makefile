@@ -41,4 +41,4 @@ chunk_full_params: $(CHUNK_FULL_PARAMS_SOURCE_FILES)
 	gcc -std=c99 -g $^ -o bin/chunk_upload_full_params $(INCLUDE_PATH) -lghttp -lcjson
 
 chunk_run_in_thread: $(CHUNK_RUN_IN_THREAD_SOURCE_FILES)
-	gcc -std=c99 -g $^ -o bin/chunk_run_in_thread $(INCLUDE_PATH) -lghttp -lcjson
+	gcc -std=c99 -g $^ -o bin/chunk_upload_run_in_thread $(INCLUDE_PATH) -lghttp -lcjson
